@@ -87,11 +87,27 @@ export default function DisasterMap() {
     setLoading(true);
     const fromDate=new Date(); fromDate.setDate(fromDate.getDate()-days);
     const fromStr=fromDate.toISOString().split("T")[0];
-    const results=await Promise.allSettled(DISASTER_TYPES.map(type=>axios.get(`https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=${type}&fromdate=${fromStr}&todate=&alertlevel=&country=&limit=100`)));
-    let all=[];
-    results.forEach(r=>{ if(r.status==="fulfilled"){ const evs=r.value.data?.features?.filter(e=>{ const c=e.geometry?.coordinates; return Array.isArray(c)&&c.length>=2&&typeof c[0]==="number"&&typeof c[1]==="number"; })||[]; all=[...all,...evs]; } });
-    setDisasters(all); setLoading(false);
-    if(all.length>0){ try{ const formatted=all.map(d=>({eventid:d.properties?.eventid||Date.now().toString(),latitude:d.geometry?.coordinates[1],longitude:d.geometry?.coordinates[0],type:d.properties?.eventtype||"Unknown",description:d.properties?.htmldescription||d.properties?.title||"Unknown Event"})); await axios.post(`${SERVER_URL}/api/disasters/report-batch`,{disasters:formatted}); }catch{} }
+    try {
+      const res = await axios.get(
+        `https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=EQ,FL,TC,VO,DR,WF&fromdate=${fromStr}&todate=&alertlevel=&country=&limit=500`
+      );
+      const features = res.data?.features || [];
+      const seen = new Set();
+      const all = features.filter(e => {
+        const c = e.geometry?.coordinates;
+        const id = e.properties?.eventid;
+        if (!Array.isArray(c) || c.length < 2 || typeof c[0] !== "number" || typeof c[1] !== "number") return false;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+      setDisasters(all);
+      if(all.length>0){ try{ const formatted=all.map(d=>({eventid:d.properties?.eventid||Date.now().toString(),latitude:d.geometry?.coordinates[1],longitude:d.geometry?.coordinates[0],type:d.properties?.eventtype||"Unknown",description:d.properties?.htmldescription||d.properties?.title||"Unknown Event"})); await axios.post(`${SERVER_URL}/api/disasters/report-batch`,{disasters:formatted}); }catch(e){} }
+    } catch(err) {
+      console.error("Failed to fetch disasters:", err.message);
+    } finally {
+      setLoading(false);
+    }
   },[]);
 
   useEffect(()=>{fetchDisasters(daysBack);},[daysBack,fetchDisasters]);
@@ -389,5 +405,7 @@ export default function DisasterMap() {
     </div>
   );
 }
+
+
 
 

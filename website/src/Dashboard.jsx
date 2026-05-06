@@ -20,7 +20,7 @@ export default function Dashboard({ user, onLogout }) {
         <div style={{ maxWidth: '100%', padding: '0 1.5rem', display: 'flex', alignItems: 'center', height: 56, gap: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
             <i className="fa-solid fa-shield-halved" style={{ color: '#fff', fontSize: '1.2rem' }}></i>
-            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', letterSpacing: '0.05em' }}>GUARDIAN</span>
+            <span style={{ fontWeight: 800, fontSize: '1rem', color: '#fff', letterSpacing: '0.05em' }}>OARFIN</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.25rem', flex: 1 }}>

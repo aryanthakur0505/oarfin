@@ -3,10 +3,11 @@ const axios = require('axios');
 const { isDisasterNews } = require('./llmService');
 const cache = require('./cache');
 
-const USER_AGENT = 'Mozilla/5.0 (compatible; OarfinBot/1.0; +http://www.oarfin.com)';
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-const CACHE_KEYS = { BBC: 'bbc_news', NDTV: 'ndtv_news', REDDIT: 'reddit_news' };
-const CACHE_TTL = { BBC: 300, NDTV: 300, REDDIT: 120 };
+const CACHE_KEYS = { BBC: 'bbc_news', NDTV: 'ndtv_news', REDDIT: 'reddit_news', GDACS_RSS: 'gdacs_rss' };
+const REDDIT_CACHE = {};
+const CACHE_TTL = { BBC: 300, NDTV: 300, REDDIT: 120, GDACS_RSS: 300 };
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -107,26 +108,34 @@ async function scrapeNDTV() {
   }
 }
 
-async function fetchReddit() {
-  const cached = cache.get(CACHE_KEYS.REDDIT);
+async function fetchReddit(sub) {
+  sub = sub || 'DisasterUpdate';
+  const cacheKey = 'reddit_' + sub;
+  const cached = cache.get(cacheKey);
   if (cached) return cached;
 
-  const response = await axios.get('https://www.reddit.com/r/DisasterUpdate.json', {
+  // Use Pullpush (Reddit archive API) — Reddit direct API blocks server-side requests
+  const response = await axios.get('https://api.pullpush.io/reddit/search/submission/?subreddit=' + sub + '&size=25&sort=desc', {
     headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
     timeout: 10000,
   });
 
-  const posts = response.data.data.children.map((post) => ({
-    title: post.data.title,
-    type: post.data.is_video ? 'video' : 'image',
-    post_link: post.data.url,
-    reddit_link: `https://reddit.com${post.data.permalink}`,
-    thumbnail: post.data.thumbnail,
-    created: new Date(post.data.created_utc * 1000).toISOString(),
-  }));
+  const posts = (response.data.data || []).map((post) => ({
+    title: post.title,
+    type: post.is_video ? 'video' : (/\.(jpg|jpeg|png|gif|webp)$/i.test(post.url || '') ? 'image' : 'link'),
+    post_link: post.url,
+    reddit_link: 'https://reddit.com' + post.permalink,
+    thumbnail: post.thumbnail && post.thumbnail.startsWith('http') ? post.thumbnail : null,
+    score: post.score,
+    comments: post.num_comments,
+    created: new Date((post.created_utc || 0) * 1000).toISOString(),
+    author: post.author,
+    flair: post.link_flair_text || '',
+  })).filter(p => p.title);
 
-  cache.set(CACHE_KEYS.REDDIT, posts, CACHE_TTL.REDDIT);
+  cache.set(cacheKey, posts, CACHE_TTL.REDDIT);
   return posts;
 }
+
 
 module.exports = { scrapeBBC, scrapeNDTV, fetchReddit };

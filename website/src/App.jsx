@@ -8,8 +8,8 @@ export default function App() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('guardian_user');
-    const token = localStorage.getItem('guardian_token');
+    const stored = localStorage.getItem('oarfin_user');
+    const token = localStorage.getItem('oarfin_token');
     if (stored && token) {
       try { setUser(JSON.parse(stored)); } catch { /* invalid */ }
     }
@@ -19,8 +19,8 @@ export default function App() {
   const handleLogin = (userData) => setUser(userData);
 
   const handleLogout = () => {
-    localStorage.removeItem('guardian_token');
-    localStorage.removeItem('guardian_user');
+    localStorage.removeItem('oarfin_token');
+    localStorage.removeItem('oarfin_user');
     setUser(null);
   };
 

@@ -23,7 +23,8 @@ async function getNDTVNews(req, res) {
 
 async function getRedditNews(req, res) {
   try {
-    const posts = await fetchReddit();
+    const sub = req.query.sub || 'DisasterUpdate';
+    const posts = await fetchReddit(sub);
     res.status(200).json(posts);
   } catch (err) {
     console.error('Reddit error:', err.message);
@@ -35,13 +36,7 @@ async function getCacheStats(req, res) {
   const stats = cache.getStats();
   const keys = cache.keys();
   const cacheInfo = Object.fromEntries(
-    keys.map((key) => [
-      key,
-      {
-        ttl: cache.getTtl(key),
-        expiresIn: Math.round(((cache.getTtl(key) || 0) - Date.now()) / 1000),
-      },
-    ])
+    keys.map((key) => [key, { ttl: cache.getTtl(key), expiresIn: Math.round(((cache.getTtl(key) || 0) - Date.now()) / 1000) }])
   );
   res.status(200).json({ stats, activeKeys: cacheInfo });
 }
